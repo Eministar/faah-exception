@@ -1,0 +1,26 @@
+# Build / Gradle
+.gradle/
+build/
+out/
+.kotlin/
+
+# Keep Gradle wrapper binary in repo
+!gradle/wrapper/gradle-wrapper.jar
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# IntelliJ Platform plugin sandbox/artifacts
+.intellijPlatform/
+
+# OS junk
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Optional logs
+*.log

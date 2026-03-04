@@ -1,0 +1,34 @@
+<idea-plugin>
+    <id>dev.eministar.fahsound</id>
+    <name>FAH Failure Sound</name>
+    <vendor>Eministar</vendor>
+    <description><![CDATA[
+      **FaahException** gives you instant sound feedback for key IntelliJ events, so you can hear failures, warnings, and successes without constantly watching build output.
+
+      **Highlights:**
+      - Configurable sounds for Build, Run/Debug, Gradle, Maven, and integrated Terminal events
+      - Separate triggers for `failed`, `warning`, and `success`
+      - Per-event sound selection, per-event max playback duration (`Max ms`), and a built-in test button
+      - Support for bundled sounds and custom `.mp3`/`.wav` files from your custom sound folder
+      - Global controls for volume, debounce, and optional notifications
+
+      A focused workflow helper for developers who want faster feedback while coding.
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>org.jetbrains.plugins.gradle</depends>
+    <depends>org.jetbrains.idea.maven</depends>
+    <depends>org.jetbrains.plugins.terminal</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <applicationService serviceImplementation="dev.eministar.fahsound.settings.FaahSettingsService"/>
+        <applicationService serviceImplementation="dev.eministar.fahsound.sound.FaahSoundService"/>
+        <applicationService serviceImplementation="dev.eministar.fahsound.listeners.FaahExternalSystemFailureWatcher"/>
+        <postStartupActivity implementation="dev.eministar.fahsound.listeners.FaahStartupActivity"/>
+        <applicationConfigurable
+                id="dev.eministar.fahsound.settings"
+                displayName="FAH Failure Sound"
+                instance="dev.eministar.fahsound.settings.FaahSettingsConfigurable"/>
+        <notificationGroup id="faah.sound.notifications" displayType="BALLOON" isLogByDefault="true"/>
+    </extensions>
+</idea-plugin>

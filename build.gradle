@@ -1,0 +1,57 @@
+plugins {
+    id 'java'
+    id 'org.jetbrains.intellij.platform' version '2.10.2'
+}
+
+group = 'dev.eministar.fahsound'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+    intellijPlatform {
+        defaultRepositories()
+    }
+}
+
+dependencies {
+    implementation 'javazoom:jlayer:1.0.1'
+
+    intellijPlatform {
+        intellijIdeaCommunity('2024.3.5')
+        bundledPlugin('org.jetbrains.plugins.gradle')
+        bundledPlugin('org.jetbrains.idea.maven')
+        bundledPlugin('org.jetbrains.plugins.terminal')
+    }
+
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+}
+
+intellijPlatform {
+    pluginConfiguration {
+        name = 'FaahException'
+        version = project.version.toString()
+        description = 'FaahException delivers configurable sound feedback for IntelliJ Build, Run/Debug, Gradle, Maven, and Terminal events (failed, warning, success).'
+        ideaVersion {
+            sinceBuild = '243'
+            untilBuild = '253.*'
+        }
+    }
+    signing {
+        certificateChain = providers.environmentVariable('JB_CERTIFICATE_CHAIN')
+        privateKey = providers.environmentVariable('JB_PRIVATE_KEY')
+        password = providers.environmentVariable('JB_PRIVATE_KEY_PASSWORD')
+    }
+    publishing {
+        token = providers.environmentVariable('JB_PUBLISH_TOKEN')
+    }
+}
