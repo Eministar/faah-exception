@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'dev.eministar.fahsound'
-version = '1.0.0'
+version = '1.0.1'
 
 repositories {
     mavenCentral()
@@ -43,7 +43,7 @@ intellijPlatform {
         description = 'FaahException delivers configurable sound feedback for IntelliJ Build, Run/Debug, Gradle, Maven, and Terminal events (failed, warning, success).'
         ideaVersion {
             sinceBuild = '243'
-            untilBuild = '253.*'
+            untilBuild = '261.*'
         }
     }
     signing {
