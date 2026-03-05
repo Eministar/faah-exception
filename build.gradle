@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'dev.eministar.fahsound'
-version = '1.0.1'
+version = '1.0.3'
 
 repositories {
     mavenCentral()
@@ -27,8 +27,8 @@ dependencies {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 tasks.withType(Test).configureEach {
@@ -37,12 +37,31 @@ tasks.withType(Test).configureEach {
 
 intellijPlatform {
     pluginConfiguration {
-        name = 'FaahException'
+        name = 'FAH Failure Sound'
         version = project.version.toString()
-        description = 'FaahException delivers configurable sound feedback for IntelliJ Build, Run/Debug, Gradle, and Maven events (failed, warning, success).'
+        description = '''
+### Hear feedback instantly
+
+**FAH Failure Sound** plays configurable audio for key IntelliJ events, so you can stay focused on code instead of constantly watching output tabs.
+
+### Supported events
+
+- Build: `failed`, `warning`, `succeeded`
+- Run/Debug: `failed`, `succeeded`
+- External tools: `Gradle failed`, `Maven failed`
+
+### What you can customize
+
+- Per-event sound source (`bundled`, `custom`, `no sound`)
+- Per-event max playback duration (`Max ms`)
+- Global volume and debounce
+- Optional IDE notifications
+- Custom `.mp3` and `.wav` files from your IDE config folder
+
+Built for faster feedback loops while coding.
+'''.trim()
         ideaVersion {
             sinceBuild = '243'
-            untilBuild = '261.*'
         }
     }
     pluginVerification {

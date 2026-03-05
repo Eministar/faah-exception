@@ -3,16 +3,25 @@
     <name>FAH Failure Sound</name>
     <vendor>Eministar</vendor>
     <description><![CDATA[
-      **FaahException** gives you instant sound feedback for key IntelliJ events, so you can hear failures, warnings, and successes without constantly watching build output.
+### Hear feedback instantly
 
-      **Highlights:**
-      - Configurable sounds for Build, Run/Debug, Gradle, and Maven events
-      - Separate triggers for `failed`, `warning`, and `success`
-      - Per-event sound selection, per-event max playback duration (`Max ms`), and a built-in test button
-      - Support for bundled sounds and custom `.mp3`/`.wav` files from your custom sound folder
-      - Global controls for volume, debounce, and optional notifications
+**FAH Failure Sound** plays configurable audio for key IntelliJ events, so you can stay focused on code instead of constantly watching output tabs.
 
-      A focused workflow helper for developers who want faster feedback while coding.
+### Supported events
+
+- Build: `failed`, `warning`, `succeeded`
+- Run/Debug: `failed`, `succeeded`
+- External tools: `Gradle failed`, `Maven failed`
+
+### What you can customize
+
+- Per-event sound source (`bundled`, `custom`, `no sound`)
+- Per-event max playback duration (`Max ms`)
+- Global volume and debounce
+- Optional IDE notifications
+- Custom `.mp3` and `.wav` files from your IDE config folder
+
+Built for faster feedback loops while coding.
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
@@ -20,9 +29,6 @@
     <depends>org.jetbrains.idea.maven</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <applicationService serviceImplementation="dev.eministar.fahsound.settings.FaahSettingsService"/>
-        <applicationService serviceImplementation="dev.eministar.fahsound.sound.FaahSoundService"/>
-        <applicationService serviceImplementation="dev.eministar.fahsound.listeners.FaahExternalSystemFailureWatcher"/>
         <postStartupActivity implementation="dev.eministar.fahsound.listeners.FaahStartupActivity"/>
         <applicationConfigurable
                 id="dev.eministar.fahsound.settings"
