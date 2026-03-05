@@ -29,6 +29,7 @@ Built for faster feedback loops while coding.
     <depends>org.jetbrains.idea.maven</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <applicationService serviceImplementation="dev.eministar.fahsound.listeners.FaahLifecycleBootstrapService"/>
         <postStartupActivity implementation="dev.eministar.fahsound.listeners.FaahStartupActivity"/>
         <applicationConfigurable
                 id="dev.eministar.fahsound.settings"
