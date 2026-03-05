@@ -20,7 +20,6 @@ dependencies {
         intellijIdeaCommunity('2024.3.5')
         bundledPlugin('org.jetbrains.plugins.gradle')
         bundledPlugin('org.jetbrains.idea.maven')
-        bundledPlugin('org.jetbrains.plugins.terminal')
     }
 
     testImplementation platform('org.junit:junit-bom:5.11.4')
@@ -40,10 +39,15 @@ intellijPlatform {
     pluginConfiguration {
         name = 'FaahException'
         version = project.version.toString()
-        description = 'FaahException delivers configurable sound feedback for IntelliJ Build, Run/Debug, Gradle, Maven, and Terminal events (failed, warning, success).'
+        description = 'FaahException delivers configurable sound feedback for IntelliJ Build, Run/Debug, Gradle, and Maven events (failed, warning, success).'
         ideaVersion {
             sinceBuild = '243'
             untilBuild = '261.*'
+        }
+    }
+    pluginVerification {
+        ides {
+            recommended()
         }
     }
     signing {

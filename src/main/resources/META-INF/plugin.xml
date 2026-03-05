@@ -6,7 +6,7 @@
       **FaahException** gives you instant sound feedback for key IntelliJ events, so you can hear failures, warnings, and successes without constantly watching build output.
 
       **Highlights:**
-      - Configurable sounds for Build, Run/Debug, Gradle, Maven, and integrated Terminal events
+      - Configurable sounds for Build, Run/Debug, Gradle, and Maven events
       - Separate triggers for `failed`, `warning`, and `success`
       - Per-event sound selection, per-event max playback duration (`Max ms`), and a built-in test button
       - Support for bundled sounds and custom `.mp3`/`.wav` files from your custom sound folder
@@ -18,7 +18,6 @@
     <depends>com.intellij.modules.platform</depends>
     <depends>org.jetbrains.plugins.gradle</depends>
     <depends>org.jetbrains.idea.maven</depends>
-    <depends>org.jetbrains.plugins.terminal</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="dev.eministar.fahsound.settings.FaahSettingsService"/>

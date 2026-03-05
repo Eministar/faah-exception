@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>Mach Build-/Run-Ergebnisse hörbar</b> 🔊<br/>
-  Meme-Sounds für Build, Run, Gradle, Maven und Terminal - inklusive Fehler, Erfolg und Warning.
+  Meme-Sounds für Build, Run, Gradle und Maven - inklusive Fehler, Erfolg und Warning.
 </p>
 
 <p align="center">
@@ -31,7 +31,7 @@ Wenn du beim Entwickeln nicht ständig auf Build-/Run-Ausgaben schauen willst, s
 
 ## 🚀 Features auf einen Blick
 
-- ✅ Sounds für Build, Run/Debug, Gradle, Maven und Terminal-Events
+- ✅ Sounds für Build, Run/Debug, Gradle und Maven-Events
 - ⚙️ Pro Event eigener Sound + eigene maximale Abspielzeit (`Max ms`)
 - 🎚️ Lautstärke (`0-100`) und Debounce (`ms`) konfigurierbar
 - 🧩 Eigene Audiodateien (`.mp3`, `.wav`) aus Custom-Ordner nutzbar
@@ -49,8 +49,6 @@ Wenn du beim Entwickeln nicht ständig auf Build-/Run-Ausgaben schauen willst, s
 | `Run succeeded` | Run/Debug mit `exitCode == 0` | `No sound` |
 | `Gradle failed` | IntelliJ Gradle Runner meldet Fehler | `Bundled / error.mp3` |
 | `Maven failed` | IntelliJ Maven Runner meldet Fehler | `Bundled / error.mp3` |
-| `Terminal command failed` | Integriertes IntelliJ Terminal meldet Fehler | `Bundled / error.mp3` |
-| `Terminal command succeeded` | Integriertes IntelliJ Terminal erfolgreich | `No sound` |
 
 ## ⚙️ Konfiguration
 
@@ -126,8 +124,6 @@ src/main/java/dev/eministar/fahsound
 
 ## ⚠️ Grenzen / Hinweise
 
-- Externe OS-Terminals außerhalb von IntelliJ werden nicht überwacht.
-- Die Terminal-Erkennung hängt von IntelliJ-Terminal/Shell-Integration ab.
 - Trigger beziehen sich auf IntelliJ-Events (nicht auf beliebige Prozesse außerhalb der IDE).
 
 ## 📄 Lizenz

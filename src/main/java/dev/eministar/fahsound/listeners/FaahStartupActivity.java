@@ -12,7 +12,6 @@ public final class FaahStartupActivity implements StartupActivity.DumbAware {
     public void runActivity(@NotNull Project project) {
         FaahExternalSystemFailureWatcher.getInstance();
         FaahBuildEventWatcher.install(project);
-        FaahTerminalFailureWatcher.install(project);
         MessageBusConnection connection = project.getMessageBus().connect(project);
         connection.subscribe(ProjectTaskListener.TOPIC, new FaahProjectTaskFailureListener(project));
         connection.subscribe(ExecutionManager.EXECUTION_TOPIC, new FaahExecutionFailureListener(project));

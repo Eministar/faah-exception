@@ -9,9 +9,7 @@ public enum FaahSoundEvent {
     RUN_FAILED("run_failed", "Run failed", FaahSoundCatalog.bundled("error.mp3")),
     RUN_SUCCESS("run_success", "Run succeeded", FaahSoundCatalog.SOURCE_NONE),
     GRADLE_FAILED("gradle_failed", "Gradle failed", FaahSoundCatalog.bundled("error.mp3")),
-    MAVEN_FAILED("maven_failed", "Maven failed", FaahSoundCatalog.bundled("error.mp3")),
-    TERMINAL_FAILED("terminal_failed", "Terminal command failed", FaahSoundCatalog.bundled("error.mp3")),
-    TERMINAL_SUCCESS("terminal_success", "Terminal command succeeded", FaahSoundCatalog.SOURCE_NONE);
+    MAVEN_FAILED("maven_failed", "Maven failed", FaahSoundCatalog.bundled("error.mp3"));
 
     private final String id;
     private final String displayName;
@@ -39,7 +37,7 @@ public enum FaahSoundEvent {
     }
 
     public boolean isSuccessEvent() {
-        return this == BUILD_SUCCESS || this == RUN_SUCCESS || this == TERMINAL_SUCCESS;
+        return this == BUILD_SUCCESS || this == RUN_SUCCESS;
     }
 
     public boolean isWarningEvent() {
