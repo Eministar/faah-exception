@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'dev.eministar.fahsound'
-version = '1.0.4'
+version = '1.0.5'
 
 repositories {
     mavenCentral()
@@ -40,25 +40,27 @@ intellijPlatform {
         name = 'FAH Failure Sound'
         version = project.version.toString()
         description = '''
-### Hear feedback instantly
-
-**FAH Failure Sound** plays configurable audio for key IntelliJ events, so you can stay focused on code instead of constantly watching output tabs.
-
-### Supported events
-
-- Build: `failed`, `warning`, `succeeded`
-- Run/Debug: `failed`, `succeeded`
-- External tools: `Gradle failed`, `Maven failed`
-
-### What you can customize
-
-- Per-event sound source (`bundled`, `custom`, `no sound`)
-- Per-event max playback duration (`Max ms`)
-- Global volume and debounce
-- Optional IDE notifications
-- Custom `.mp3` and `.wav` files from your IDE config folder
-
-Built for faster feedback loops while coding.
+Hear build and run results instantly.
+<p><b>FAH Failure Sound</b> plays configurable audio cues for key IDE events, so you can stop watching output tabs and still notice failures, warnings, and successful runs.</p>
+<ul>
+  <li>Build events: failed, warning, succeeded</li>
+  <li>Run/Debug events: failed, succeeded</li>
+  <li>External build events: Gradle failed, Maven failed</li>
+  <li>Per-event sound source: bundled, custom file, or no sound</li>
+  <li>Per-event max playback duration, global volume, debounce, and optional notifications</li>
+  <li>Custom local <code>.mp3</code> and <code>.wav</code> files from your IDE config folder</li>
+  <li>No external services, no extra IDE plugins, and no internal JetBrains APIs required</li>
+</ul>
+<p>Useful for quick feedback loops while coding, especially when builds run in the background.</p>
+<p><a href="https://github.com/Eministar/faah-exception">Source code</a> | <a href="https://github.com/Eministar/faah-exception/issues">Issue tracker</a></p>
+'''.trim()
+        changeNotes = '''
+<p><b>1.0.5</b></p>
+<ul>
+  <li>Replaced Marketplace/plugin manager description Markdown with supported HTML formatting</li>
+  <li>Improved listing copy for clearer searchability and feature summary</li>
+  <li>Confirmed the plugin stays local-only and does not depend on internal JetBrains APIs</li>
+</ul>
 '''.trim()
         ideaVersion {
             sinceBuild = '243'
