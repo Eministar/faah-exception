@@ -10,19 +10,19 @@ import com.intellij.openapi.externalSystem.service.notification.ExternalSystemPr
 import dev.eministar.fahsound.sound.FaahSoundService;
 import dev.eministar.fahsound.sound.FaahSoundEvent;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.idea.maven.utils.MavenUtil;
-import org.jetbrains.plugins.gradle.util.GradleConstants;
 
 @Service(Service.Level.APP)
 public final class FaahExternalSystemFailureWatcher implements Disposable {
+    private static final String GRADLE_SYSTEM_ID = "GRADLE";
+    private static final String MAVEN_SYSTEM_ID = "Maven";
     private final ExternalSystemProgressNotificationManager notificationManager;
     private final ExternalSystemTaskNotificationListener notificationListener = new ExternalSystemTaskNotificationListener() {
         @Override
         public void onFailure(@NotNull ExternalSystemTaskId id, @NotNull Exception e) {
             ProjectSystemId systemId = id.getProjectSystemId();
-            if (GradleConstants.SYSTEM_ID.equals(systemId)) {
+            if (matchesSystem(systemId, GRADLE_SYSTEM_ID)) {
                 FaahSoundService.getInstance().playEvent(null, FaahSoundEvent.GRADLE_FAILED, "Gradle");
-            } else if (MavenUtil.SYSTEM_ID.equals(systemId)) {
+            } else if (matchesSystem(systemId, MAVEN_SYSTEM_ID)) {
                 FaahSoundService.getInstance().playEvent(null, FaahSoundEvent.MAVEN_FAILED, "Maven");
             }
         }
@@ -35,6 +35,11 @@ public final class FaahExternalSystemFailureWatcher implements Disposable {
 
     public static FaahExternalSystemFailureWatcher getInstance() {
         return ApplicationManager.getApplication().getService(FaahExternalSystemFailureWatcher.class);
+    }
+
+    private static boolean matchesSystem(@NotNull ProjectSystemId systemId, @NotNull String expectedId) {
+        return expectedId.equalsIgnoreCase(systemId.getId())
+                || expectedId.equalsIgnoreCase(systemId.getReadableName());
     }
 
     @Override

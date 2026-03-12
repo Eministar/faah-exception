@@ -7,6 +7,7 @@ import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
 import dev.eministar.fahsound.sound.FaahSoundCatalog;
 import dev.eministar.fahsound.sound.FaahSoundEvent;
+import dev.eministar.fahsound.visual.FaahVisualCatalog;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedHashMap;
@@ -24,8 +25,10 @@ public final class FaahSettingsService implements PersistentStateComponent<FaahS
         public int debounceMs = 2000;
         public String soundFileName = DEFAULT_SOUND_FILE;
         public Map<String, String> soundByEvent = new LinkedHashMap<>();
+        public Map<String, String> visualByEvent = new LinkedHashMap<>();
         public Map<String, Integer> maxDurationMsByEvent = new LinkedHashMap<>();
         public boolean showNotification = true;
+        public boolean showFailureImage = true;
     }
 
     public static FaahSettingsService getInstance() {
@@ -79,6 +82,17 @@ public final class FaahSettingsService implements PersistentStateComponent<FaahS
         state.soundByEvent.put(event.getId(), FaahSoundCatalog.normalizeSourceId(sourceId));
     }
 
+    @NotNull
+    public String getVisualSource(@NotNull FaahSoundEvent event) {
+        normalize(state);
+        return state.visualByEvent.get(event.getId());
+    }
+
+    public void setVisualSource(@NotNull FaahSoundEvent event, @NotNull String sourceId) {
+        normalize(state);
+        state.visualByEvent.put(event.getId(), FaahVisualCatalog.normalizeSourceId(sourceId));
+    }
+
     public int getMaxDurationMs(@NotNull FaahSoundEvent event) {
         normalize(state);
         Integer value = state.maxDurationMsByEvent.get(event.getId());
@@ -98,11 +112,22 @@ public final class FaahSettingsService implements PersistentStateComponent<FaahS
         state.showNotification = showNotification;
     }
 
+    public boolean isShowVisualOverlay() {
+        return state.showFailureImage;
+    }
+
+    public void setShowVisualOverlay(boolean showFailureImage) {
+        state.showFailureImage = showFailureImage;
+    }
+
     private static void normalize(@NotNull StateData value) {
         value.volume = clamp(value.volume, 0, 100);
         value.debounceMs = Math.max(0, value.debounceMs);
         if (value.soundByEvent == null) {
             value.soundByEvent = new LinkedHashMap<>();
+        }
+        if (value.visualByEvent == null) {
+            value.visualByEvent = new LinkedHashMap<>();
         }
         if (value.maxDurationMsByEvent == null) {
             value.maxDurationMsByEvent = new LinkedHashMap<>();
@@ -114,6 +139,13 @@ public final class FaahSettingsService implements PersistentStateComponent<FaahS
             }
         }
         value.soundByEvent = normalizedMap;
+        Map<String, String> normalizedVisualMap = new LinkedHashMap<>();
+        for (Map.Entry<String, String> entry : value.visualByEvent.entrySet()) {
+            if (entry.getKey() != null && !entry.getKey().isBlank()) {
+                normalizedVisualMap.put(entry.getKey(), FaahVisualCatalog.normalizeSourceId(entry.getValue()));
+            }
+        }
+        value.visualByEvent = normalizedVisualMap;
         Map<String, Integer> normalizedDurationMap = new LinkedHashMap<>();
         for (Map.Entry<String, Integer> entry : value.maxDurationMsByEvent.entrySet()) {
             if (entry.getKey() != null && !entry.getKey().isBlank()) {
@@ -131,8 +163,18 @@ public final class FaahSettingsService implements PersistentStateComponent<FaahS
                 value.soundByEvent.put(event.getId(), migratedLegacy);
             }
         }
+        if (value.visualByEvent.isEmpty()) {
+            for (FaahSoundEvent event : FaahSoundEvent.orderedValues()) {
+                String defaultVisualSource = FaahVisualCatalog.normalizeSourceId(event.getDefaultVisualSourceId());
+                if (!value.showFailureImage && !FaahVisualCatalog.isNone(defaultVisualSource)) {
+                    defaultVisualSource = FaahVisualCatalog.SOURCE_NONE;
+                }
+                value.visualByEvent.put(event.getId(), defaultVisualSource);
+            }
+        }
         for (FaahSoundEvent event : FaahSoundEvent.orderedValues()) {
             value.soundByEvent.putIfAbsent(event.getId(), FaahSoundCatalog.normalizeSourceId(event.getDefaultSourceId()));
+            value.visualByEvent.putIfAbsent(event.getId(), FaahVisualCatalog.normalizeSourceId(event.getDefaultVisualSourceId()));
             value.maxDurationMsByEvent.putIfAbsent(event.getId(), 0);
         }
         String buildFailedSource = value.soundByEvent.get(FaahSoundEvent.BUILD_FAILED.getId());

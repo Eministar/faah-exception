@@ -3,32 +3,35 @@
     <name>FAH Failure Sound</name>
     <vendor url="https://github.com/Eministar">Eministar</vendor>
     <description><![CDATA[
-Hear build and run results instantly.
+Hear build and run results instantly across JetBrains IDEs.
 <p><b>FAH Failure Sound</b> plays configurable audio cues for key IDE events, so you can stop watching output tabs and still notice failures, warnings, and successful runs.</p>
 <ul>
     <li>Build events: failed, warning, succeeded</li>
     <li>Run/Debug events: failed, succeeded</li>
     <li>External build events: Gradle failed, Maven failed</li>
     <li>Per-event sound source: bundled, custom file, or no sound</li>
-    <li>Per-event max playback duration, global volume, debounce, and optional notifications</li>
-    <li>Custom local <code>.mp3</code> and <code>.wav</code> files from your IDE config folder</li>
-    <li>No external services, no extra IDE plugins, and no internal JetBrains APIs required</li>
+    <li>Per-event image/GIF source: bundled, custom file, or no overlay</li>
+    <li>Per-event max playback duration, global volume, debounce, optional notifications, and optional image/GIF overlays</li>
+    <li>Custom local <code>.mp3</code>, <code>.wav</code>, <code>.png</code>, <code>.jpg</code>, and <code>.gif</code> files from your IDE config folder</li>
+    <li>Works as a platform plugin across JetBrains IDEs without requiring Gradle/Maven as mandatory dependencies</li>
+    <li>No external services and no internal JetBrains APIs required</li>
 </ul>
 <p>Useful for quick feedback loops while coding, especially when builds run in the background.</p>
 <p><a href="https://github.com/Eministar/faah-exception">Source code</a> | <a href="https://github.com/Eministar/faah-exception/issues">Issue tracker</a></p>
     ]]></description>
     <change-notes><![CDATA[
-<p><b>1.0.5</b></p>
+<p><b>1.1.0</b></p>
 <ul>
-    <li>Replaced Marketplace/plugin manager description Markdown with supported HTML formatting</li>
-    <li>Improved listing copy for clearer searchability and feature summary</li>
-    <li>Confirmed the plugin stays local-only and does not depend on internal JetBrains APIs</li>
+    <li>Expanded the plugin to work across JetBrains IDEs as a platform plugin instead of being tied to IntelliJ IDEA only</li>
+    <li>Added per-event sound and image/GIF configuration, including bundled defaults and custom files from the IDE config folder</li>
+    <li>Bundled <code>error.mp3</code>, <code>succeed.mp3</code>, <code>cooked.jpg</code>, and <code>happy.gif</code> directly into the plugin</li>
+    <li>Added in-IDE overlay previews for images and GIFs and kept notifications available independently of sound playback</li>
+    <li>Reworked the settings UI so it adapts better to the available space and no longer requires manual resizing to use comfortably</li>
+    <li>Fixed the default build-success sound to use the shipped <code>succeed.mp3</code> resource</li>
 </ul>
     ]]></change-notes>
 
     <depends>com.intellij.modules.platform</depends>
-    <depends>org.jetbrains.plugins.gradle</depends>
-    <depends>org.jetbrains.idea.maven</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="dev.eministar.fahsound.listeners.FaahLifecycleBootstrapService"/>

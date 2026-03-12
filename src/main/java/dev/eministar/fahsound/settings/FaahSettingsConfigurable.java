@@ -4,13 +4,16 @@ import com.intellij.ide.actions.RevealFileAction;
 import com.intellij.openapi.options.ConfigurationException;
 import com.intellij.openapi.options.SearchableConfigurable;
 import com.intellij.openapi.ui.Messages;
+import com.intellij.ui.components.JBScrollPane;
 import dev.eministar.fahsound.sound.FaahSoundCatalog;
 import dev.eministar.fahsound.sound.FaahSoundEvent;
 import dev.eministar.fahsound.sound.FaahSoundService;
+import dev.eministar.fahsound.visual.FaahVisualCatalog;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.BorderFactory;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
@@ -20,14 +23,18 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JSpinner;
+import javax.swing.Scrollable;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.event.ChangeEvent;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Rectangle;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.EnumMap;
@@ -37,16 +44,22 @@ import java.util.Map;
 public final class FaahSettingsConfigurable implements SearchableConfigurable {
     private static final int MAX_DURATION_MS = 300000;
 
-    private JPanel rootPanel;
+    private JComponent rootComponent;
+    private SettingsScrollPanel contentPanel;
     private JCheckBox enabledCheckBox;
     private JSlider volumeSlider;
     private JLabel volumeValueLabel;
     private JSpinner debounceSpinner;
     private JCheckBox notificationCheckBox;
-    private JLabel customFolderPathLabel;
-    private JButton openFolderButton;
+    private JCheckBox visualOverlayCheckBox;
+    private JLabel customSoundFolderPathLabel;
+    private JLabel customMediaFolderPathLabel;
+    private JButton openSoundFolderButton;
     private JButton refreshSoundsButton;
+    private JButton openMediaFolderButton;
+    private JButton refreshMediaButton;
     private final Map<FaahSoundEvent, JComboBox<FaahSoundCatalog.SoundSourceOption>> soundSelectors = new EnumMap<>(FaahSoundEvent.class);
+    private final Map<FaahSoundEvent, JComboBox<FaahVisualCatalog.VisualSourceOption>> visualSelectors = new EnumMap<>(FaahSoundEvent.class);
     private final Map<FaahSoundEvent, JSpinner> durationSpinners = new EnumMap<>(FaahSoundEvent.class);
 
     @Override
@@ -61,153 +74,11 @@ public final class FaahSettingsConfigurable implements SearchableConfigurable {
 
     @Override
     public @Nullable JComponent createComponent() {
-        if (rootPanel == null) {
-            rootPanel = new JPanel(new GridBagLayout());
-            enabledCheckBox = new JCheckBox("Enable sounds");
-            volumeSlider = new JSlider(0, 100, 100);
-            volumeValueLabel = new JLabel("100");
-            debounceSpinner = new JSpinner(new SpinnerNumberModel(2000, 0, 60000, 100));
-            notificationCheckBox = new JCheckBox("Show notification");
-            customFolderPathLabel = new JLabel();
-            openFolderButton = new JButton("Open folder");
-            refreshSoundsButton = new JButton("Refresh sounds");
-
-            volumeSlider.addChangeListener(this::onVolumeChanged);
-            openFolderButton.addActionListener(event -> openCustomFolder());
-            refreshSoundsButton.addActionListener(event -> reloadSoundOptions(currentSelections(), currentDurations()));
-
-            GridBagConstraints c = baseConstraints();
-            c.gridwidth = 4;
-            rootPanel.add(enabledCheckBox, c);
-
-            c.gridy++;
-            c.gridwidth = 1;
-            c.weightx = 0;
-            c.insets = new Insets(0, 0, 8, 8);
-            rootPanel.add(new JLabel("Volume"), c);
-
-            c.gridx = 1;
-            c.weightx = 1;
-            c.gridwidth = 2;
-            c.insets = new Insets(0, 0, 8, 8);
-            rootPanel.add(volumeSlider, c);
-
-            c.gridx = 3;
-            c.gridwidth = 1;
-            c.weightx = 0;
-            c.insets = new Insets(0, 0, 8, 0);
-            rootPanel.add(volumeValueLabel, c);
-
-            c.gridx = 0;
-            c.gridy++;
-            c.weightx = 0;
-            c.gridwidth = 1;
-            c.insets = new Insets(0, 0, 8, 8);
-            rootPanel.add(new JLabel("Debounce (ms)"), c);
-
-            c.gridx = 1;
-            c.gridwidth = 3;
-            c.weightx = 1;
-            c.insets = new Insets(0, 0, 8, 0);
-            rootPanel.add(debounceSpinner, c);
-
-            c.gridx = 0;
-            c.gridy++;
-            c.gridwidth = 4;
-            c.weightx = 1;
-            c.insets = new Insets(0, 0, 8, 0);
-            rootPanel.add(notificationCheckBox, c);
-
-            c.gridy++;
-            c.gridwidth = 1;
-            c.weightx = 0;
-            c.insets = new Insets(0, 0, 8, 8);
-            rootPanel.add(new JLabel("Custom sounds folder"), c);
-
-            c.gridx = 1;
-            c.gridwidth = 2;
-            c.weightx = 1;
-            c.fill = GridBagConstraints.HORIZONTAL;
-            c.insets = new Insets(0, 0, 8, 8);
-            rootPanel.add(customFolderPathLabel, c);
-
-            JPanel folderButtonsPanel = new JPanel();
-            folderButtonsPanel.add(openFolderButton);
-            folderButtonsPanel.add(refreshSoundsButton);
-            c.gridx = 3;
-            c.gridwidth = 1;
-            c.weightx = 0;
-            c.insets = new Insets(0, 0, 8, 0);
-            rootPanel.add(folderButtonsPanel, c);
-
-            c.gridx = 0;
-            c.gridy++;
-            c.gridwidth = 1;
-            c.weightx = 0;
-            c.insets = new Insets(0, 0, 6, 8);
-            rootPanel.add(new JLabel("Event"), c);
-
-            c.gridx = 1;
-            c.weightx = 1;
-            c.insets = new Insets(0, 0, 6, 8);
-            rootPanel.add(new JLabel("Sound"), c);
-
-            c.gridx = 2;
-            c.weightx = 0;
-            c.insets = new Insets(0, 0, 6, 8);
-            rootPanel.add(new JLabel("Max ms (0=full)"), c);
-
-            c.gridx = 3;
-            c.weightx = 0;
-            c.insets = new Insets(0, 0, 6, 0);
-            rootPanel.add(new JLabel("Test"), c);
-
-            for (FaahSoundEvent soundEvent : FaahSoundEvent.orderedValues()) {
-                c.gridx = 0;
-                c.gridy++;
-                c.gridwidth = 1;
-                c.weightx = 0;
-                c.fill = GridBagConstraints.NONE;
-                c.anchor = GridBagConstraints.WEST;
-                c.insets = new Insets(0, 0, 8, 8);
-                rootPanel.add(new JLabel(soundEvent.getDisplayName()), c);
-
-                JComboBox<FaahSoundCatalog.SoundSourceOption> comboBox = createSoundSelector();
-                soundSelectors.put(soundEvent, comboBox);
-                c.gridx = 1;
-                c.weightx = 1;
-                c.fill = GridBagConstraints.HORIZONTAL;
-                c.insets = new Insets(0, 0, 8, 8);
-                rootPanel.add(comboBox, c);
-
-                JSpinner durationSpinner = new JSpinner(new SpinnerNumberModel(0, 0, MAX_DURATION_MS, 100));
-                durationSpinners.put(soundEvent, durationSpinner);
-                c.gridx = 2;
-                c.weightx = 0;
-                c.fill = GridBagConstraints.HORIZONTAL;
-                c.insets = new Insets(0, 0, 8, 8);
-                rootPanel.add(durationSpinner, c);
-
-                JButton testButton = new JButton("Test");
-                testButton.addActionListener(actionEvent -> testSelectedSound(soundEvent));
-                c.gridx = 3;
-                c.weightx = 0;
-                c.fill = GridBagConstraints.NONE;
-                c.insets = new Insets(0, 0, 8, 0);
-                rootPanel.add(testButton, c);
-            }
-
-            c.gridx = 0;
-            c.gridy++;
-            c.gridwidth = 4;
-            c.weightx = 1;
-            c.weighty = 1;
-            c.fill = GridBagConstraints.BOTH;
-            c.insets = new Insets(0, 0, 0, 0);
-            rootPanel.add(new JPanel(), c);
+        if (rootComponent == null) {
+            initializeUi();
         }
         reset();
-        return rootPanel;
+        return rootComponent;
     }
 
     @Override
@@ -225,8 +96,14 @@ public final class FaahSettingsConfigurable implements SearchableConfigurable {
         if (notificationCheckBox.isSelected() != settings.isShowNotification()) {
             return true;
         }
+        if (visualOverlayCheckBox.isSelected() != settings.isShowVisualOverlay()) {
+            return true;
+        }
         for (FaahSoundEvent soundEvent : FaahSoundEvent.orderedValues()) {
-            if (!selectedSourceId(soundEvent).equals(settings.getSoundSource(soundEvent))) {
+            if (!selectedSoundSourceId(soundEvent).equals(settings.getSoundSource(soundEvent))) {
+                return true;
+            }
+            if (!selectedVisualSourceId(soundEvent).equals(settings.getVisualSource(soundEvent))) {
                 return true;
             }
             if (selectedDurationMs(soundEvent) != settings.getMaxDurationMs(soundEvent)) {
@@ -243,8 +120,10 @@ public final class FaahSettingsConfigurable implements SearchableConfigurable {
         settings.setVolume(volumeSlider.getValue());
         settings.setDebounceMs(((Number) debounceSpinner.getValue()).intValue());
         settings.setShowNotification(notificationCheckBox.isSelected());
+        settings.setShowVisualOverlay(visualOverlayCheckBox.isSelected());
         for (FaahSoundEvent soundEvent : FaahSoundEvent.orderedValues()) {
-            settings.setSoundSource(soundEvent, selectedSourceId(soundEvent));
+            settings.setSoundSource(soundEvent, selectedSoundSourceId(soundEvent));
+            settings.setVisualSource(soundEvent, selectedVisualSourceId(soundEvent));
             settings.setMaxDurationMs(soundEvent, selectedDurationMs(soundEvent));
         }
     }
@@ -257,32 +136,266 @@ public final class FaahSettingsConfigurable implements SearchableConfigurable {
         volumeValueLabel.setText(Integer.toString(settings.getVolume()));
         debounceSpinner.setValue(settings.getDebounceMs());
         notificationCheckBox.setSelected(settings.isShowNotification());
-        String customPath = FaahSoundCatalog.getCustomFolderPath().toString();
-        customFolderPathLabel.setText(customPath);
-        customFolderPathLabel.setToolTipText(customPath);
+        visualOverlayCheckBox.setSelected(settings.isShowVisualOverlay());
+        updateFolderLabels();
 
-        Map<FaahSoundEvent, String> selections = new EnumMap<>(FaahSoundEvent.class);
+        Map<FaahSoundEvent, String> soundSelections = new EnumMap<>(FaahSoundEvent.class);
+        Map<FaahSoundEvent, String> visualSelections = new EnumMap<>(FaahSoundEvent.class);
         Map<FaahSoundEvent, Integer> durations = new EnumMap<>(FaahSoundEvent.class);
         for (FaahSoundEvent soundEvent : FaahSoundEvent.orderedValues()) {
-            selections.put(soundEvent, settings.getSoundSource(soundEvent));
+            soundSelections.put(soundEvent, settings.getSoundSource(soundEvent));
+            visualSelections.put(soundEvent, settings.getVisualSource(soundEvent));
             durations.put(soundEvent, settings.getMaxDurationMs(soundEvent));
         }
-        reloadSoundOptions(selections, durations);
+        reloadOptions(soundSelections, visualSelections, durations);
     }
 
     @Override
     public void disposeUIResources() {
-        rootPanel = null;
+        rootComponent = null;
+        contentPanel = null;
         enabledCheckBox = null;
         volumeSlider = null;
         volumeValueLabel = null;
         debounceSpinner = null;
         notificationCheckBox = null;
-        customFolderPathLabel = null;
-        openFolderButton = null;
+        visualOverlayCheckBox = null;
+        customSoundFolderPathLabel = null;
+        customMediaFolderPathLabel = null;
+        openSoundFolderButton = null;
         refreshSoundsButton = null;
+        openMediaFolderButton = null;
+        refreshMediaButton = null;
         soundSelectors.clear();
+        visualSelectors.clear();
         durationSpinners.clear();
+    }
+
+    private void initializeUi() {
+        contentPanel = new SettingsScrollPanel();
+        contentPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        enabledCheckBox = new JCheckBox("Enable sounds");
+        volumeSlider = new JSlider(0, 100, 100);
+        volumeValueLabel = new JLabel("100");
+        debounceSpinner = new JSpinner(new SpinnerNumberModel(2000, 0, 60000, 100));
+        notificationCheckBox = new JCheckBox("Show notification");
+        visualOverlayCheckBox = new JCheckBox("Show image / GIF overlays");
+        customSoundFolderPathLabel = new JLabel();
+        customMediaFolderPathLabel = new JLabel();
+        openSoundFolderButton = new JButton("Open sounds");
+        refreshSoundsButton = new JButton("Refresh sounds");
+        openMediaFolderButton = new JButton("Open media");
+        refreshMediaButton = new JButton("Refresh media");
+
+        volumeSlider.addChangeListener(this::onVolumeChanged);
+        openSoundFolderButton.addActionListener(event -> openSoundFolder());
+        refreshSoundsButton.addActionListener(event -> reloadOptions(currentSoundSelections(), currentVisualSelections(), currentDurations()));
+        openMediaFolderButton.addActionListener(event -> openMediaFolder());
+        refreshMediaButton.addActionListener(event -> reloadOptions(currentSoundSelections(), currentVisualSelections(), currentDurations()));
+
+        int row = 0;
+        contentPanel.add(createGeneralPanel(), constraints(row++));
+        contentPanel.add(createFoldersPanel(), constraints(row++));
+        for (FaahSoundEvent soundEvent : FaahSoundEvent.orderedValues()) {
+            contentPanel.add(createEventPanel(soundEvent), constraints(row++));
+        }
+
+        GridBagConstraints filler = constraints(row);
+        filler.weighty = 1;
+        filler.fill = GridBagConstraints.BOTH;
+        contentPanel.add(new JPanel(), filler);
+
+        JBScrollPane scrollPane = new JBScrollPane(
+                contentPanel,
+                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
+        );
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        rootComponent = scrollPane;
+    }
+
+    @NotNull
+    private JPanel createGeneralPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("General"),
+                BorderFactory.createEmptyBorder(6, 8, 8, 8)
+        ));
+
+        GridBagConstraints c = baseConstraints();
+        c.gridwidth = 2;
+        panel.add(enabledCheckBox, c);
+
+        c.gridy++;
+        c.gridwidth = 1;
+        c.weightx = 0;
+        c.insets = new Insets(0, 0, 8, 8);
+        panel.add(new JLabel("Volume"), c);
+
+        c.gridx = 1;
+        c.weightx = 1;
+        c.fill = GridBagConstraints.HORIZONTAL;
+        JPanel volumePanel = new JPanel(new GridBagLayout());
+        GridBagConstraints volumeConstraints = baseConstraints();
+        volumeConstraints.insets = new Insets(0, 0, 0, 8);
+        volumeConstraints.weightx = 1;
+        volumePanel.add(volumeSlider, volumeConstraints);
+        volumeConstraints.gridx = 1;
+        volumeConstraints.insets = new Insets(0, 0, 0, 0);
+        volumeConstraints.weightx = 0;
+        volumePanel.add(volumeValueLabel, volumeConstraints);
+        panel.add(volumePanel, c);
+
+        c.gridx = 0;
+        c.gridy++;
+        c.weightx = 0;
+        c.insets = new Insets(0, 0, 8, 8);
+        panel.add(new JLabel("Debounce (ms)"), c);
+
+        c.gridx = 1;
+        c.weightx = 1;
+        c.insets = new Insets(0, 0, 8, 0);
+        panel.add(debounceSpinner, c);
+
+        c.gridx = 0;
+        c.gridy++;
+        c.gridwidth = 2;
+        c.weightx = 1;
+        c.insets = new Insets(0, 0, 8, 0);
+        panel.add(notificationCheckBox, c);
+
+        c.gridy++;
+        c.insets = new Insets(0, 0, 0, 0);
+        panel.add(visualOverlayCheckBox, c);
+
+        return panel;
+    }
+
+    @NotNull
+    private JPanel createFoldersPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Custom Files"),
+                BorderFactory.createEmptyBorder(6, 8, 8, 8)
+        ));
+
+        GridBagConstraints c = baseConstraints();
+        c.weightx = 0;
+        c.insets = new Insets(0, 0, 8, 8);
+        panel.add(new JLabel("Sounds"), c);
+
+        c.gridx = 1;
+        c.weightx = 1;
+        c.fill = GridBagConstraints.HORIZONTAL;
+        panel.add(customSoundFolderPathLabel, c);
+
+        JPanel soundButtonsPanel = new JPanel();
+        soundButtonsPanel.add(openSoundFolderButton);
+        soundButtonsPanel.add(refreshSoundsButton);
+        c.gridx = 2;
+        c.weightx = 0;
+        c.insets = new Insets(0, 0, 8, 0);
+        panel.add(soundButtonsPanel, c);
+
+        c.gridx = 0;
+        c.gridy++;
+        c.weightx = 0;
+        c.insets = new Insets(0, 0, 0, 8);
+        panel.add(new JLabel("Media"), c);
+
+        c.gridx = 1;
+        c.weightx = 1;
+        c.fill = GridBagConstraints.HORIZONTAL;
+        panel.add(customMediaFolderPathLabel, c);
+
+        JPanel mediaButtonsPanel = new JPanel();
+        mediaButtonsPanel.add(openMediaFolderButton);
+        mediaButtonsPanel.add(refreshMediaButton);
+        c.gridx = 2;
+        c.weightx = 0;
+        c.insets = new Insets(0, 0, 0, 0);
+        panel.add(mediaButtonsPanel, c);
+
+        return panel;
+    }
+
+    @NotNull
+    private JPanel createEventPanel(@NotNull FaahSoundEvent soundEvent) {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder(soundEvent.getDisplayName()),
+                BorderFactory.createEmptyBorder(6, 8, 8, 8)
+        ));
+
+        JComboBox<FaahSoundCatalog.SoundSourceOption> soundSelector = createSoundSelector();
+        soundSelectors.put(soundEvent, soundSelector);
+        JComboBox<FaahVisualCatalog.VisualSourceOption> visualSelector = createVisualSelector();
+        visualSelectors.put(soundEvent, visualSelector);
+        JSpinner durationSpinner = new JSpinner(new SpinnerNumberModel(0, 0, MAX_DURATION_MS, 100));
+        durationSpinners.put(soundEvent, durationSpinner);
+        JButton testButton = new JButton("Test");
+        testButton.addActionListener(actionEvent -> testSelectedEvent(soundEvent));
+
+        GridBagConstraints c = baseConstraints();
+        c.insets = new Insets(0, 0, 8, 8);
+        c.weightx = 0;
+        panel.add(new JLabel("Sound"), c);
+
+        c.gridx = 1;
+        c.weightx = 1;
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(0, 0, 8, 0);
+        panel.add(soundSelector, c);
+
+        c.gridx = 0;
+        c.gridy++;
+        c.weightx = 0;
+        c.insets = new Insets(0, 0, 8, 8);
+        panel.add(new JLabel("Image / GIF"), c);
+
+        c.gridx = 1;
+        c.weightx = 1;
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(0, 0, 8, 0);
+        panel.add(visualSelector, c);
+
+        c.gridx = 0;
+        c.gridy++;
+        c.weightx = 0;
+        c.insets = new Insets(0, 0, 0, 8);
+        panel.add(new JLabel("Max ms (0=full)"), c);
+
+        JPanel footerPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints footerConstraints = baseConstraints();
+        footerConstraints.weightx = 1;
+        footerConstraints.insets = new Insets(0, 0, 0, 8);
+        footerConstraints.fill = GridBagConstraints.HORIZONTAL;
+        footerPanel.add(durationSpinner, footerConstraints);
+        footerConstraints.gridx = 1;
+        footerConstraints.weightx = 0;
+        footerConstraints.insets = new Insets(0, 0, 0, 0);
+        footerConstraints.fill = GridBagConstraints.NONE;
+        footerPanel.add(testButton, footerConstraints);
+
+        c.gridx = 1;
+        c.weightx = 1;
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(0, 0, 0, 0);
+        panel.add(footerPanel, c);
+
+        return panel;
+    }
+
+    private void updateFolderLabels() {
+        String soundPath = FaahSoundCatalog.getCustomFolderPath().toString();
+        customSoundFolderPathLabel.setText(soundPath);
+        customSoundFolderPathLabel.setToolTipText(soundPath);
+
+        String mediaPath = FaahVisualCatalog.getCustomFolderPath().toString();
+        customMediaFolderPathLabel.setText(mediaPath);
+        customMediaFolderPathLabel.setToolTipText(mediaPath);
     }
 
     private void onVolumeChanged(ChangeEvent event) {
@@ -291,53 +404,80 @@ public final class FaahSettingsConfigurable implements SearchableConfigurable {
         }
     }
 
-    private void testSelectedSound(@NotNull FaahSoundEvent soundEvent) {
+    private void testSelectedEvent(@NotNull FaahSoundEvent soundEvent) {
         try {
-            FaahSoundService.getInstance().playTestSound(
-                    selectedSourceId(soundEvent),
+            FaahSoundService.getInstance().previewEvent(
+                    soundEvent,
+                    selectedSoundSourceId(soundEvent),
+                    selectedVisualSourceId(soundEvent),
                     selectedDurationMs(soundEvent)
             );
         } catch (Throwable t) {
-            Messages.showErrorDialog("Unable to play test sound: " + t.getMessage(), "FAH Failure Sound");
+            Messages.showErrorDialog("Unable to preview event: " + t.getMessage(), "FAH Failure Sound");
         }
     }
 
-    private void openCustomFolder() {
+    private void openSoundFolder() {
         try {
             Path folder = FaahSoundCatalog.ensureCustomFolderExists();
-            String folderString = folder.toString();
-            customFolderPathLabel.setText(folderString);
-            customFolderPathLabel.setToolTipText(folderString);
             RevealFileAction.openDirectory(folder);
-            reloadSoundOptions(currentSelections(), currentDurations());
+            updateFolderLabels();
+            reloadOptions(currentSoundSelections(), currentVisualSelections(), currentDurations());
         } catch (IOException e) {
             Messages.showErrorDialog("Unable to open custom sound folder: " + e.getMessage(), "FAH Failure Sound");
         }
     }
 
-    private void reloadSoundOptions(@NotNull Map<FaahSoundEvent, String> preferredSelections,
-                                    @NotNull Map<FaahSoundEvent, Integer> preferredDurations) {
-        List<FaahSoundCatalog.SoundSourceOption> options = FaahSoundCatalog.listAvailableSources();
-        FaahSoundCatalog.SoundSourceOption[] optionArray = options.toArray(new FaahSoundCatalog.SoundSourceOption[0]);
+    private void openMediaFolder() {
+        try {
+            Path folder = FaahVisualCatalog.ensureCustomFolderExists();
+            RevealFileAction.openDirectory(folder);
+            updateFolderLabels();
+            reloadOptions(currentSoundSelections(), currentVisualSelections(), currentDurations());
+        } catch (IOException e) {
+            Messages.showErrorDialog("Unable to open custom media folder: " + e.getMessage(), "FAH Failure Sound");
+        }
+    }
+
+    private void reloadOptions(@NotNull Map<FaahSoundEvent, String> preferredSoundSelections,
+                               @NotNull Map<FaahSoundEvent, String> preferredVisualSelections,
+                               @NotNull Map<FaahSoundEvent, Integer> preferredDurations) {
+        List<FaahSoundCatalog.SoundSourceOption> soundOptions = FaahSoundCatalog.listAvailableSources();
+        FaahSoundCatalog.SoundSourceOption[] soundOptionArray = soundOptions.toArray(new FaahSoundCatalog.SoundSourceOption[0]);
+        List<FaahVisualCatalog.VisualSourceOption> visualOptions = FaahVisualCatalog.listAvailableSources();
+        FaahVisualCatalog.VisualSourceOption[] visualOptionArray = visualOptions.toArray(new FaahVisualCatalog.VisualSourceOption[0]);
         for (FaahSoundEvent soundEvent : FaahSoundEvent.orderedValues()) {
-            JComboBox<FaahSoundCatalog.SoundSourceOption> comboBox = soundSelectors.get(soundEvent);
-            if (comboBox != null) {
-                comboBox.setModel(new DefaultComboBoxModel<>(optionArray));
-                selectBySourceId(comboBox, preferredSelections.get(soundEvent), soundEvent);
+            JComboBox<FaahSoundCatalog.SoundSourceOption> soundComboBox = soundSelectors.get(soundEvent);
+            if (soundComboBox != null) {
+                soundComboBox.setModel(new DefaultComboBoxModel<>(soundOptionArray));
+                selectSoundBySourceId(soundComboBox, preferredSoundSelections.get(soundEvent), soundEvent);
+            }
+            JComboBox<FaahVisualCatalog.VisualSourceOption> visualComboBox = visualSelectors.get(soundEvent);
+            if (visualComboBox != null) {
+                visualComboBox.setModel(new DefaultComboBoxModel<>(visualOptionArray));
+                selectVisualBySourceId(visualComboBox, preferredVisualSelections.get(soundEvent), soundEvent);
             }
             JSpinner durationSpinner = durationSpinners.get(soundEvent);
             if (durationSpinner != null) {
-                int duration = preferredDurations.getOrDefault(soundEvent, 0);
-                durationSpinner.setValue(Math.max(0, duration));
+                durationSpinner.setValue(Math.max(0, preferredDurations.getOrDefault(soundEvent, 0)));
             }
         }
     }
 
     @NotNull
-    private Map<FaahSoundEvent, String> currentSelections() {
+    private Map<FaahSoundEvent, String> currentSoundSelections() {
         Map<FaahSoundEvent, String> selections = new EnumMap<>(FaahSoundEvent.class);
         for (FaahSoundEvent soundEvent : FaahSoundEvent.orderedValues()) {
-            selections.put(soundEvent, selectedSourceId(soundEvent));
+            selections.put(soundEvent, selectedSoundSourceId(soundEvent));
+        }
+        return selections;
+    }
+
+    @NotNull
+    private Map<FaahSoundEvent, String> currentVisualSelections() {
+        Map<FaahSoundEvent, String> selections = new EnumMap<>(FaahSoundEvent.class);
+        for (FaahSoundEvent soundEvent : FaahSoundEvent.orderedValues()) {
+            selections.put(soundEvent, selectedVisualSourceId(soundEvent));
         }
         return selections;
     }
@@ -352,7 +492,7 @@ public final class FaahSettingsConfigurable implements SearchableConfigurable {
     }
 
     @NotNull
-    private String selectedSourceId(@NotNull FaahSoundEvent soundEvent) {
+    private String selectedSoundSourceId(@NotNull FaahSoundEvent soundEvent) {
         JComboBox<FaahSoundCatalog.SoundSourceOption> comboBox = soundSelectors.get(soundEvent);
         if (comboBox == null) {
             return FaahSoundCatalog.normalizeSourceId(soundEvent.getDefaultSourceId());
@@ -362,6 +502,19 @@ public final class FaahSettingsConfigurable implements SearchableConfigurable {
             return FaahSoundCatalog.normalizeSourceId(option.sourceId());
         }
         return FaahSoundCatalog.normalizeSourceId(soundEvent.getDefaultSourceId());
+    }
+
+    @NotNull
+    private String selectedVisualSourceId(@NotNull FaahSoundEvent soundEvent) {
+        JComboBox<FaahVisualCatalog.VisualSourceOption> comboBox = visualSelectors.get(soundEvent);
+        if (comboBox == null) {
+            return FaahVisualCatalog.normalizeSourceId(soundEvent.getDefaultVisualSourceId());
+        }
+        Object selected = comboBox.getSelectedItem();
+        if (selected instanceof FaahVisualCatalog.VisualSourceOption option) {
+            return FaahVisualCatalog.normalizeSourceId(option.sourceId());
+        }
+        return FaahVisualCatalog.normalizeSourceId(soundEvent.getDefaultVisualSourceId());
     }
 
     private int selectedDurationMs(@NotNull FaahSoundEvent soundEvent) {
@@ -376,9 +529,9 @@ public final class FaahSettingsConfigurable implements SearchableConfigurable {
         return 0;
     }
 
-    private void selectBySourceId(@NotNull JComboBox<FaahSoundCatalog.SoundSourceOption> comboBox,
-                                  @Nullable String sourceId,
-                                  @NotNull FaahSoundEvent soundEvent) {
+    private void selectSoundBySourceId(@NotNull JComboBox<FaahSoundCatalog.SoundSourceOption> comboBox,
+                                       @Nullable String sourceId,
+                                       @NotNull FaahSoundEvent soundEvent) {
         String normalized = FaahSoundCatalog.normalizeSourceId(sourceId);
         for (int i = 0; i < comboBox.getItemCount(); i++) {
             FaahSoundCatalog.SoundSourceOption item = comboBox.getItemAt(i);
@@ -390,6 +543,30 @@ public final class FaahSettingsConfigurable implements SearchableConfigurable {
         String defaultSource = FaahSoundCatalog.normalizeSourceId(soundEvent.getDefaultSourceId());
         for (int i = 0; i < comboBox.getItemCount(); i++) {
             FaahSoundCatalog.SoundSourceOption item = comboBox.getItemAt(i);
+            if (item.sourceId().equals(defaultSource)) {
+                comboBox.setSelectedIndex(i);
+                return;
+            }
+        }
+        if (comboBox.getItemCount() > 0) {
+            comboBox.setSelectedIndex(0);
+        }
+    }
+
+    private void selectVisualBySourceId(@NotNull JComboBox<FaahVisualCatalog.VisualSourceOption> comboBox,
+                                        @Nullable String sourceId,
+                                        @NotNull FaahSoundEvent soundEvent) {
+        String normalized = FaahVisualCatalog.normalizeSourceId(sourceId);
+        for (int i = 0; i < comboBox.getItemCount(); i++) {
+            FaahVisualCatalog.VisualSourceOption item = comboBox.getItemAt(i);
+            if (item.sourceId().equals(normalized)) {
+                comboBox.setSelectedIndex(i);
+                return;
+            }
+        }
+        String defaultSource = FaahVisualCatalog.normalizeSourceId(soundEvent.getDefaultVisualSourceId());
+        for (int i = 0; i < comboBox.getItemCount(); i++) {
+            FaahVisualCatalog.VisualSourceOption item = comboBox.getItemAt(i);
             if (item.sourceId().equals(defaultSource)) {
                 comboBox.setSelectedIndex(i);
                 return;
@@ -421,6 +598,38 @@ public final class FaahSettingsConfigurable implements SearchableConfigurable {
     }
 
     @NotNull
+    private JComboBox<FaahVisualCatalog.VisualSourceOption> createVisualSelector() {
+        JComboBox<FaahVisualCatalog.VisualSourceOption> comboBox = new JComboBox<>();
+        comboBox.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list,
+                                                          Object value,
+                                                          int index,
+                                                          boolean isSelected,
+                                                          boolean cellHasFocus) {
+                Object displayValue = value;
+                if (value instanceof FaahVisualCatalog.VisualSourceOption option) {
+                    displayValue = option.displayName();
+                }
+                return super.getListCellRendererComponent(list, displayValue, index, isSelected, cellHasFocus);
+            }
+        });
+        return comboBox;
+    }
+
+    @NotNull
+    private GridBagConstraints constraints(int row) {
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridx = 0;
+        c.gridy = row;
+        c.weightx = 1;
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.anchor = GridBagConstraints.NORTHWEST;
+        c.insets = new Insets(0, 0, 10, 0);
+        return c;
+    }
+
+    @NotNull
     private GridBagConstraints baseConstraints() {
         GridBagConstraints c = new GridBagConstraints();
         c.gridx = 0;
@@ -428,7 +637,38 @@ public final class FaahSettingsConfigurable implements SearchableConfigurable {
         c.weightx = 1;
         c.fill = GridBagConstraints.HORIZONTAL;
         c.anchor = GridBagConstraints.WEST;
-        c.insets = new Insets(0, 0, 8, 0);
+        c.insets = new Insets(0, 0, 0, 0);
         return c;
+    }
+
+    private static final class SettingsScrollPanel extends JPanel implements Scrollable {
+        private SettingsScrollPanel() {
+            super(new GridBagLayout());
+        }
+
+        @Override
+        public Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return 24;
+        }
+
+        @Override
+        public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return Math.max(visibleRect.height - 24, 24);
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            return true;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportHeight() {
+            return false;
+        }
     }
 }

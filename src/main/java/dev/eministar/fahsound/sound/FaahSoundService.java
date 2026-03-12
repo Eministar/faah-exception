@@ -10,6 +10,8 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.util.concurrency.AppExecutorUtil;
 import dev.eministar.fahsound.settings.FaahSettingsService;
+import dev.eministar.fahsound.ui.FaahImageOverlayService;
+import dev.eministar.fahsound.visual.FaahVisualCatalog;
 import javazoom.jl.decoder.JavaLayerException;
 import javazoom.jl.player.advanced.AdvancedPlayer;
 import javazoom.jl.player.Player;
@@ -26,7 +28,6 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
 import java.util.Locale;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -51,26 +52,41 @@ public final class FaahSoundService implements Disposable {
         if (!settings.isEnabled()) {
             return;
         }
+        String selectedSoundSource = settings.getSoundSource(event);
+        String selectedVisualSource = settings.getVisualSource(event);
+        boolean shouldPlaySound = !FaahSoundCatalog.isNone(selectedSoundSource);
+        boolean shouldShowVisual = settings.isShowVisualOverlay() && !FaahVisualCatalog.isNone(selectedVisualSource);
+        boolean shouldNotify = settings.isShowNotification();
+        if (!shouldPlaySound && !shouldShowVisual && !shouldNotify) {
+            return;
+        }
         if (!acquireDebounce(settings.getDebounceMs())) {
             return;
         }
-        String selectedSource = settings.getSoundSource(event);
-        if (FaahSoundCatalog.isNone(selectedSource)) {
-            return;
-        }
         int maxDurationMs = settings.getMaxDurationMs(event);
-        playAsync(event, selectedSource, settings.getVolume(), maxDurationMs);
-        if (settings.isShowNotification()) {
+        if (shouldPlaySound) {
+            playAsync(event, selectedSoundSource, settings.getVolume(), maxDurationMs);
+        }
+        if (shouldNotify) {
             notifyEvent(project, event, source);
+        }
+        if (shouldShowVisual) {
+            FaahImageOverlayService.getInstance().showVisual(project, event, selectedVisualSource, maxDurationMs);
         }
     }
 
-    public void playTestSound(@NotNull String sourceId, int maxDurationMs) {
+    public void previewEvent(@NotNull FaahSoundEvent event,
+                             @NotNull String soundSourceId,
+                             @NotNull String visualSourceId,
+                             int maxDurationMs) {
         FaahSettingsService settings = FaahSettingsService.getInstance();
-        if (FaahSoundCatalog.isNone(sourceId)) {
-            return;
+        int normalizedDurationMs = Math.max(0, maxDurationMs);
+        if (!FaahSoundCatalog.isNone(soundSourceId)) {
+            playAsync(event, soundSourceId, settings.getVolume(), normalizedDurationMs);
         }
-        playAsync(FaahSoundEvent.BUILD_FAILED, sourceId, settings.getVolume(), Math.max(0, maxDurationMs));
+        if (!FaahVisualCatalog.isNone(visualSourceId)) {
+            FaahImageOverlayService.getInstance().showVisual(null, event, visualSourceId, normalizedDurationMs);
+        }
     }
 
     private boolean acquireDebounce(int debounceMs) {

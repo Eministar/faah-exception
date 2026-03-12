@@ -1,6 +1,7 @@
-package dev.eministar.fahsound.sound;
+package dev.eministar.fahsound.visual;
 
 import com.intellij.openapi.application.PathManager;
+import dev.eministar.fahsound.sound.FaahSoundEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,17 +16,17 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-public final class FaahSoundCatalog {
+public final class FaahVisualCatalog {
     public static final String SOURCE_NONE = "none";
     public static final String BUNDLED_PREFIX = "bundled:";
     public static final String CUSTOM_PREFIX = "custom:";
-    private static final String CUSTOM_FOLDER_NAME = "faah-sounds";
+    private static final String CUSTOM_FOLDER_NAME = "faah-media";
     private static final List<String> KNOWN_BUNDLED_FILES = List.of(
-            "error.mp3",
-            "succeed.mp3"
+            "cooked.jpg",
+            "happy.gif"
     );
 
-    private FaahSoundCatalog() {
+    private FaahVisualCatalog() {
     }
 
     @NotNull
@@ -62,10 +63,6 @@ public final class FaahSoundCatalog {
         return SOURCE_NONE.equals(normalizeSourceId(sourceId));
     }
 
-    public static boolean isBundled(@Nullable String sourceId) {
-        return normalizeSourceId(sourceId).startsWith(BUNDLED_PREFIX);
-    }
-
     public static boolean isCustom(@Nullable String sourceId) {
         return normalizeSourceId(sourceId).startsWith(CUSTOM_PREFIX);
     }
@@ -95,13 +92,13 @@ public final class FaahSoundCatalog {
     }
 
     @NotNull
-    public static List<SoundSourceOption> listAvailableSources() {
-        Map<String, SoundSourceOption> options = new LinkedHashMap<>();
-        options.put(SOURCE_NONE, new SoundSourceOption(SOURCE_NONE, "No sound"));
+    public static List<VisualSourceOption> listAvailableSources() {
+        Map<String, VisualSourceOption> options = new LinkedHashMap<>();
+        options.put(SOURCE_NONE, new VisualSourceOption(SOURCE_NONE, "No image / GIF"));
         for (String bundledFile : KNOWN_BUNDLED_FILES) {
             String sourceId = bundled(bundledFile);
             if (hasBundledFile(bundledFile)) {
-                options.put(sourceId, new SoundSourceOption(sourceId, "Bundled / " + bundledFile));
+                options.put(sourceId, new VisualSourceOption(sourceId, "Bundled / " + bundledFile));
             }
         }
         Path folder = getCustomFolderPath();
@@ -109,13 +106,13 @@ public final class FaahSoundCatalog {
             try (var stream = Files.list(folder)) {
                 List<Path> files = stream
                         .filter(Files::isRegularFile)
-                        .filter(path -> isSupportedAudio(path.getFileName().toString()))
+                        .filter(path -> isSupportedVisual(path.getFileName().toString()))
                         .sorted()
                         .toList();
                 for (Path file : files) {
                     String fileName = file.getFileName().toString();
                     String sourceId = custom(fileName);
-                    options.put(sourceId, new SoundSourceOption(sourceId, "Custom / " + fileName));
+                    options.put(sourceId, new VisualSourceOption(sourceId, "Custom / " + fileName));
                 }
             } catch (IOException ignored) {
             }
@@ -130,7 +127,7 @@ public final class FaahSoundCatalog {
         if (!isNone(preferred)) {
             ordered.add(preferred);
         }
-        String eventDefault = normalizeSourceId(event.getDefaultSourceId());
+        String eventDefault = normalizeSourceId(event.getDefaultVisualSourceId());
         if (!isNone(eventDefault)) {
             ordered.add(eventDefault);
             for (String bundledFile : KNOWN_BUNDLED_FILES) {
@@ -157,19 +154,22 @@ public final class FaahSoundCatalog {
     }
 
     private static boolean hasBundledFile(@NotNull String fileName) {
-        try (var stream = FaahSoundCatalog.class.getClassLoader().getResourceAsStream(fileName)) {
+        try (var stream = FaahVisualCatalog.class.getClassLoader().getResourceAsStream(fileName)) {
             return stream != null;
         } catch (IOException ignored) {
             return false;
         }
     }
 
-    private static boolean isSupportedAudio(@NotNull String fileName) {
+    private static boolean isSupportedVisual(@NotNull String fileName) {
         String lower = fileName.toLowerCase(Locale.ROOT);
-        return lower.endsWith(".mp3") || lower.endsWith(".wav");
+        return lower.endsWith(".png")
+                || lower.endsWith(".jpg")
+                || lower.endsWith(".jpeg")
+                || lower.endsWith(".gif");
     }
 
-    public record SoundSourceOption(@NotNull String sourceId, @NotNull String displayName) {
+    public record VisualSourceOption(@NotNull String sourceId, @NotNull String displayName) {
         @Override
         public String toString() {
             return displayName;
