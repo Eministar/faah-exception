@@ -23,9 +23,10 @@ public final class FaahProjectEventInstaller {
             }
             project.putUserData(INSTALLED_KEY, Boolean.TRUE);
         }
-        FaahBuildEventWatcher.install(project);
+        FaahBuildOutcomeTracker buildOutcomeTracker = new FaahBuildOutcomeTracker();
+        FaahBuildEventWatcher.install(project, buildOutcomeTracker);
         MessageBusConnection connection = project.getMessageBus().connect(project);
-        connection.subscribe(ProjectTaskListener.TOPIC, new FaahProjectTaskFailureListener(project));
+        connection.subscribe(ProjectTaskListener.TOPIC, new FaahProjectTaskFailureListener(project, buildOutcomeTracker));
         connection.subscribe(ExecutionManager.EXECUTION_TOPIC, new FaahExecutionFailureListener(project));
     }
 }

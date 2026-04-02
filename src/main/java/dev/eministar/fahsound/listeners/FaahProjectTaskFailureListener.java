@@ -9,13 +9,18 @@ import org.jetbrains.annotations.NotNull;
 
 public final class FaahProjectTaskFailureListener implements ProjectTaskListener {
     private final Project project;
+    private final FaahBuildOutcomeTracker buildOutcomeTracker;
 
-    public FaahProjectTaskFailureListener(@NotNull Project project) {
+    public FaahProjectTaskFailureListener(@NotNull Project project, @NotNull FaahBuildOutcomeTracker buildOutcomeTracker) {
         this.project = project;
+        this.buildOutcomeTracker = buildOutcomeTracker;
     }
 
     @Override
     public void finished(@NotNull ProjectTaskManager.Result result) {
+        if (buildOutcomeTracker.shouldSuppressProjectTaskResult()) {
+            return;
+        }
         if (result.hasErrors()) {
             FaahSoundService.getInstance().playEvent(project, FaahSoundEvent.BUILD_FAILED, "Build");
             return;

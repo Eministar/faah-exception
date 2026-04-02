@@ -47,12 +47,44 @@ public enum FaahSoundEvent {
         return defaultVisualSourceId;
     }
 
+    @NotNull
+    public String getDebounceScopeId() {
+        return id;
+    }
+
+    public int getPlaybackPriority() {
+        return switch (this) {
+            case BUILD_FAILED, RUN_FAILED, GRADLE_FAILED, MAVEN_FAILED -> 300;
+            case BUILD_WARNING -> 200;
+            case BUILD_SUCCESS, RUN_SUCCESS -> 100;
+        };
+    }
+
     public boolean isSuccessEvent() {
         return this == BUILD_SUCCESS || this == RUN_SUCCESS;
     }
 
     public boolean isWarningEvent() {
         return this == BUILD_WARNING;
+    }
+
+    public boolean isFailureEvent() {
+        return this == BUILD_FAILED
+                || this == RUN_FAILED
+                || this == GRADLE_FAILED
+                || this == MAVEN_FAILED;
+    }
+
+    public boolean isBuildRelatedEvent() {
+        return this == BUILD_FAILED
+                || this == BUILD_WARNING
+                || this == BUILD_SUCCESS
+                || this == GRADLE_FAILED
+                || this == MAVEN_FAILED;
+    }
+
+    public boolean isRunRelatedEvent() {
+        return this == RUN_FAILED || this == RUN_SUCCESS;
     }
 
     @NotNull

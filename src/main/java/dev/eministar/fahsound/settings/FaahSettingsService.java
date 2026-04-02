@@ -27,6 +27,7 @@ public final class FaahSettingsService implements PersistentStateComponent<FaahS
         public Map<String, String> soundByEvent = new LinkedHashMap<>();
         public Map<String, String> visualByEvent = new LinkedHashMap<>();
         public Map<String, Integer> maxDurationMsByEvent = new LinkedHashMap<>();
+        public Map<String, Integer> visualDurationMsByEvent = new LinkedHashMap<>();
         public boolean showNotification = true;
         public boolean showFailureImage = true;
     }
@@ -95,13 +96,22 @@ public final class FaahSettingsService implements PersistentStateComponent<FaahS
 
     public int getMaxDurationMs(@NotNull FaahSoundEvent event) {
         normalize(state);
-        Integer value = state.maxDurationMsByEvent.get(event.getId());
-        return value == null ? 0 : Math.max(0, value);
+        return normalizedDuration(state.maxDurationMsByEvent.get(event.getId()));
     }
 
     public void setMaxDurationMs(@NotNull FaahSoundEvent event, int maxDurationMs) {
         normalize(state);
         state.maxDurationMsByEvent.put(event.getId(), Math.max(0, maxDurationMs));
+    }
+
+    public int getVisualDurationMs(@NotNull FaahSoundEvent event) {
+        normalize(state);
+        return normalizedDuration(state.visualDurationMsByEvent.get(event.getId()));
+    }
+
+    public void setVisualDurationMs(@NotNull FaahSoundEvent event, int visualDurationMs) {
+        normalize(state);
+        state.visualDurationMsByEvent.put(event.getId(), Math.max(0, visualDurationMs));
     }
 
     public boolean isShowNotification() {
@@ -116,8 +126,8 @@ public final class FaahSettingsService implements PersistentStateComponent<FaahS
         return state.showFailureImage;
     }
 
-    public void setShowVisualOverlay(boolean showFailureImage) {
-        state.showFailureImage = showFailureImage;
+    public void setShowVisualOverlay(boolean showVisualOverlay) {
+        state.showFailureImage = showVisualOverlay;
     }
 
     private static void normalize(@NotNull StateData value) {
@@ -132,28 +142,15 @@ public final class FaahSettingsService implements PersistentStateComponent<FaahS
         if (value.maxDurationMsByEvent == null) {
             value.maxDurationMsByEvent = new LinkedHashMap<>();
         }
-        Map<String, String> normalizedMap = new LinkedHashMap<>();
-        for (Map.Entry<String, String> entry : value.soundByEvent.entrySet()) {
-            if (entry.getKey() != null && !entry.getKey().isBlank()) {
-                normalizedMap.put(entry.getKey(), FaahSoundCatalog.normalizeSourceId(entry.getValue()));
-            }
+        if (value.visualDurationMsByEvent == null) {
+            value.visualDurationMsByEvent = new LinkedHashMap<>();
         }
-        value.soundByEvent = normalizedMap;
-        Map<String, String> normalizedVisualMap = new LinkedHashMap<>();
-        for (Map.Entry<String, String> entry : value.visualByEvent.entrySet()) {
-            if (entry.getKey() != null && !entry.getKey().isBlank()) {
-                normalizedVisualMap.put(entry.getKey(), FaahVisualCatalog.normalizeSourceId(entry.getValue()));
-            }
-        }
-        value.visualByEvent = normalizedVisualMap;
-        Map<String, Integer> normalizedDurationMap = new LinkedHashMap<>();
-        for (Map.Entry<String, Integer> entry : value.maxDurationMsByEvent.entrySet()) {
-            if (entry.getKey() != null && !entry.getKey().isBlank()) {
-                int duration = entry.getValue() == null ? 0 : Math.max(0, entry.getValue());
-                normalizedDurationMap.put(entry.getKey(), duration);
-            }
-        }
-        value.maxDurationMsByEvent = normalizedDurationMap;
+
+        value.soundByEvent = normalizeSoundMap(value.soundByEvent);
+        value.visualByEvent = normalizeVisualMap(value.visualByEvent);
+        value.maxDurationMsByEvent = normalizeDurationMap(value.maxDurationMsByEvent);
+        value.visualDurationMsByEvent = normalizeDurationMap(value.visualDurationMsByEvent);
+
         String legacySound = value.soundFileName == null || value.soundFileName.trim().isEmpty()
                 ? DEFAULT_SOUND_FILE
                 : value.soundFileName.trim();
@@ -172,17 +169,60 @@ public final class FaahSettingsService implements PersistentStateComponent<FaahS
                 value.visualByEvent.put(event.getId(), defaultVisualSource);
             }
         }
+        if (value.visualDurationMsByEvent.isEmpty()) {
+            for (FaahSoundEvent event : FaahSoundEvent.orderedValues()) {
+                int migratedDuration = normalizedDuration(value.maxDurationMsByEvent.get(event.getId()));
+                value.visualDurationMsByEvent.put(event.getId(), migratedDuration);
+            }
+        }
+
         for (FaahSoundEvent event : FaahSoundEvent.orderedValues()) {
             value.soundByEvent.putIfAbsent(event.getId(), FaahSoundCatalog.normalizeSourceId(event.getDefaultSourceId()));
             value.visualByEvent.putIfAbsent(event.getId(), FaahVisualCatalog.normalizeSourceId(event.getDefaultVisualSourceId()));
             value.maxDurationMsByEvent.putIfAbsent(event.getId(), 0);
+            value.visualDurationMsByEvent.putIfAbsent(event.getId(), normalizedDuration(value.maxDurationMsByEvent.get(event.getId())));
         }
+
         String buildFailedSource = value.soundByEvent.get(FaahSoundEvent.BUILD_FAILED.getId());
         String extracted = FaahSoundCatalog.extractFileName(buildFailedSource);
-        if (extracted.isBlank()) {
-            extracted = DEFAULT_SOUND_FILE;
+        value.soundFileName = extracted.isBlank() ? DEFAULT_SOUND_FILE : extracted;
+    }
+
+    @NotNull
+    private static Map<String, String> normalizeSoundMap(@NotNull Map<String, String> input) {
+        Map<String, String> normalized = new LinkedHashMap<>();
+        for (Map.Entry<String, String> entry : input.entrySet()) {
+            if (entry.getKey() != null && !entry.getKey().isBlank()) {
+                normalized.put(entry.getKey(), FaahSoundCatalog.normalizeSourceId(entry.getValue()));
+            }
         }
-        value.soundFileName = extracted;
+        return normalized;
+    }
+
+    @NotNull
+    private static Map<String, String> normalizeVisualMap(@NotNull Map<String, String> input) {
+        Map<String, String> normalized = new LinkedHashMap<>();
+        for (Map.Entry<String, String> entry : input.entrySet()) {
+            if (entry.getKey() != null && !entry.getKey().isBlank()) {
+                normalized.put(entry.getKey(), FaahVisualCatalog.normalizeSourceId(entry.getValue()));
+            }
+        }
+        return normalized;
+    }
+
+    @NotNull
+    private static Map<String, Integer> normalizeDurationMap(@NotNull Map<String, Integer> input) {
+        Map<String, Integer> normalized = new LinkedHashMap<>();
+        for (Map.Entry<String, Integer> entry : input.entrySet()) {
+            if (entry.getKey() != null && !entry.getKey().isBlank()) {
+                normalized.put(entry.getKey(), normalizedDuration(entry.getValue()));
+            }
+        }
+        return normalized;
+    }
+
+    private static int normalizedDuration(Integer value) {
+        return value == null ? 0 : Math.max(0, value);
     }
 
     private static int clamp(int value, int min, int max) {

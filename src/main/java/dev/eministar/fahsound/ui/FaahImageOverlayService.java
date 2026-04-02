@@ -14,17 +14,18 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
-import javax.swing.ImageIcon;
 import javax.swing.JComponent;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JWindow;
-import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.KeyboardFocusManager;
+import java.awt.RenderingHints;
 import java.awt.Window;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
@@ -62,6 +63,7 @@ public final class FaahImageOverlayService implements Disposable {
         if (ApplicationManager.getApplication().isHeadlessEnvironment()) {
             return;
         }
+
         int displayMs = normalizeDisplayDuration(suggestedDurationMs);
         long requestId = requestSequence.incrementAndGet();
         ApplicationManager.getApplication().executeOnPooledThread(() -> {
@@ -70,18 +72,21 @@ public final class FaahImageOverlayService implements Disposable {
                 if (resource == null) {
                     return;
                 }
-                ImageIcon icon = createIcon(resource.fileName(), resource.bytes());
-                if (icon == null) {
+                VisualPayload payload = createPayload(resource.fileName(), resource.bytes());
+                if (payload == null) {
                     return;
                 }
-                ApplicationManager.getApplication().invokeLater(() -> showWindow(project, icon, displayMs, requestId));
+                ApplicationManager.getApplication().invokeLater(() -> showWindow(project, payload, displayMs, requestId));
             } catch (IOException e) {
                 LOG.warn("Unable to load overlay media", e);
             }
         });
     }
 
-    private void showWindow(@Nullable Project project, @NotNull ImageIcon icon, int displayMs, long requestId) {
+    private void showWindow(@Nullable Project project,
+                            @NotNull VisualPayload payload,
+                            int displayMs,
+                            long requestId) {
         if (requestId != requestSequence.get()) {
             return;
         }
@@ -93,7 +98,7 @@ public final class FaahImageOverlayService implements Disposable {
         window.setFocusableWindowState(false);
         window.setAlwaysOnTop(false);
         window.setBackground(new Color(0, 0, 0, 0));
-        window.setContentPane(createContent(icon));
+        window.setContentPane(createContent(payload));
         window.pack();
         positionWindow(window, owner);
         window.setVisible(true);
@@ -141,10 +146,7 @@ public final class FaahImageOverlayService implements Disposable {
     }
 
     @NotNull
-    private JComponent createContent(@NotNull ImageIcon icon) {
-        JLabel label = new JLabel(icon);
-        label.setHorizontalAlignment(SwingConstants.CENTER);
-
+    private JComponent createContent(@NotNull VisualPayload payload) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(true);
         panel.setBackground(new Color(24, 24, 24));
@@ -152,7 +154,7 @@ public final class FaahImageOverlayService implements Disposable {
                 BorderFactory.createLineBorder(new Color(255, 255, 255, 180), 1),
                 BorderFactory.createEmptyBorder(8, 8, 8, 8)
         ));
-        panel.add(label, BorderLayout.CENTER);
+        panel.add(new ScaledVisualComponent(payload), BorderLayout.CENTER);
         return panel;
     }
 
@@ -223,39 +225,42 @@ public final class FaahImageOverlayService implements Disposable {
     }
 
     @Nullable
-    private ImageIcon createIcon(@NotNull String fileName, byte[] bytes) {
+    private VisualPayload createPayload(@NotNull String fileName, byte[] bytes) {
         String lower = fileName.toLowerCase(Locale.ROOT);
         if (lower.endsWith(".gif")) {
-            return scaleIconIfNeeded(new ImageIcon(bytes));
+            return createGifPayload(fileName, bytes);
         }
+        return createStaticPayload(fileName, bytes);
+    }
+
+    @Nullable
+    private VisualPayload createGifPayload(@NotNull String fileName, byte[] bytes) {
+        try {
+            javax.swing.ImageIcon icon = new javax.swing.ImageIcon(bytes);
+            if (icon.getIconWidth() <= 0 || icon.getIconHeight() <= 0) {
+                LOG.warn("Unable to decode GIF overlay media resource: " + fileName);
+                return null;
+            }
+            return new VisualPayload(icon.getImage(), icon.getIconWidth(), icon.getIconHeight());
+        } catch (Throwable t) {
+            LOG.warn("Unable to load GIF overlay media resource", t);
+            return null;
+        }
+    }
+
+    @Nullable
+    private VisualPayload createStaticPayload(@NotNull String fileName, byte[] bytes) {
         try (ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes)) {
             BufferedImage image = ImageIO.read(inputStream);
             if (image == null) {
                 LOG.warn("Unable to decode overlay media resource: " + fileName);
                 return null;
             }
-            return scaleIconIfNeeded(new ImageIcon(image));
+            return new VisualPayload(image, image.getWidth(), image.getHeight());
         } catch (IOException e) {
             LOG.warn("Unable to load overlay media resource", e);
             return null;
         }
-    }
-
-    @NotNull
-    private ImageIcon scaleIconIfNeeded(@NotNull ImageIcon icon) {
-        int width = icon.getIconWidth();
-        int height = icon.getIconHeight();
-        if (width <= MAX_IMAGE_WIDTH && height <= MAX_IMAGE_HEIGHT) {
-            return icon;
-        }
-        if (width <= 0 || height <= 0) {
-            return icon;
-        }
-        double scale = Math.min((double) MAX_IMAGE_WIDTH / width, (double) MAX_IMAGE_HEIGHT / height);
-        int scaledWidth = Math.max(1, (int) Math.round(width * scale));
-        int scaledHeight = Math.max(1, (int) Math.round(height * scale));
-        Image scaled = icon.getImage().getScaledInstance(scaledWidth, scaledHeight, Image.SCALE_SMOOTH);
-        return new ImageIcon(scaled);
     }
 
     private int normalizeDisplayDuration(int suggestedDurationMs) {
@@ -275,5 +280,52 @@ public final class FaahImageOverlayService implements Disposable {
     }
 
     private record VisualResource(@NotNull String fileName, byte[] bytes) {
+    }
+
+    private record VisualPayload(@NotNull Image image, int width, int height) {
+    }
+
+    private static final class ScaledVisualComponent extends JComponent {
+        private final Image image;
+        private final int scaledWidth;
+        private final int scaledHeight;
+
+        private ScaledVisualComponent(@NotNull VisualPayload payload) {
+            image = payload.image();
+
+            int width = Math.max(1, payload.width());
+            int height = Math.max(1, payload.height());
+            if (width <= MAX_IMAGE_WIDTH && height <= MAX_IMAGE_HEIGHT) {
+                scaledWidth = width;
+                scaledHeight = height;
+                return;
+            }
+
+            double scale = Math.min((double) MAX_IMAGE_WIDTH / width, (double) MAX_IMAGE_HEIGHT / height);
+            scaledWidth = Math.max(1, (int) Math.round(width * scale));
+            scaledHeight = Math.max(1, (int) Math.round(height * scale));
+        }
+
+        @Override
+        public Dimension getPreferredSize() {
+            return new Dimension(scaledWidth, scaledHeight);
+        }
+
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            super.paintComponent(graphics);
+            Graphics2D graphics2D = (Graphics2D) graphics.create();
+            try {
+                graphics2D.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                graphics2D.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                graphics2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int x = Math.max(0, (getWidth() - scaledWidth) / 2);
+                int y = Math.max(0, (getHeight() - scaledHeight) / 2);
+                graphics2D.drawImage(image, x, y, scaledWidth, scaledHeight, this);
+            } finally {
+                graphics2D.dispose();
+            }
+        }
     }
 }

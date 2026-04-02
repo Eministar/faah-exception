@@ -11,7 +11,8 @@ Hear build and run results instantly across JetBrains IDEs.
     <li>External build events: Gradle failed, Maven failed</li>
     <li>Per-event sound source: bundled, custom file, or no sound</li>
     <li>Per-event image/GIF source: bundled, custom file, or no overlay</li>
-    <li>Per-event max playback duration, global volume, debounce, optional notifications, and optional image/GIF overlays</li>
+    <li>Per-event sound duration, per-event overlay duration, global volume, debounce, notifications, and optional image/GIF overlays</li>
+    <li>Preset import/export and notification quick actions for Build, Run, and Problems tool windows</li>
     <li>Custom local <code>.mp3</code>, <code>.wav</code>, <code>.png</code>, <code>.jpg</code>, and <code>.gif</code> files from your IDE config folder</li>
     <li>Works as a platform plugin across JetBrains IDEs without requiring Gradle/Maven as mandatory dependencies</li>
     <li>No external services and no internal JetBrains APIs required</li>
@@ -20,14 +21,12 @@ Hear build and run results instantly across JetBrains IDEs.
 <p><a href="https://github.com/Eministar/faah-exception">Source code</a> | <a href="https://github.com/Eministar/faah-exception/issues">Issue tracker</a></p>
     ]]></description>
     <change-notes><![CDATA[
-<p><b>1.1.0</b></p>
+<p><b>1.1.2</b></p>
 <ul>
-    <li>Expanded the plugin to work across JetBrains IDEs as a platform plugin instead of being tied to IntelliJ IDEA only</li>
-    <li>Added per-event sound and image/GIF configuration, including bundled defaults and custom files from the IDE config folder</li>
-    <li>Bundled <code>error.mp3</code>, <code>succeed.mp3</code>, <code>cooked.jpg</code>, and <code>happy.gif</code> directly into the plugin</li>
-    <li>Added in-IDE overlay previews for images and GIFs and kept notifications available independently of sound playback</li>
-    <li>Reworked the settings UI so it adapts better to the available space and no longer requires manual resizing to use comfortably</li>
-    <li>Fixed the default build-success sound to use the shipped <code>succeed.mp3</code> resource</li>
+    <li>Added per-event image/GIF settings, separate sound and overlay durations, preset import/export, and notification quick actions for Build, Run, and Problems</li>
+    <li>Improved build-result routing so warnings no longer also trigger success sounds and higher-priority failures are not swallowed by global debounce timing</li>
+    <li>Improved overlay media rendering and updated the plugin icon so the logo appears larger and less zoomed out in JetBrains IDEs and the Marketplace</li>
+    <li>Kept the plugin compatible across JetBrains IDEs while continuing to bundle <code>error.mp3</code>, <code>succeed.mp3</code>, <code>cooked.jpg</code>, and <code>happy.gif</code></li>
 </ul>
     ]]></change-notes>
 
